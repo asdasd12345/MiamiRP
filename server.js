@@ -32,11 +32,12 @@ db.run(`
   )
 `);
 
-// REGISTER
+// ✅ Register
 app.post('/api/auth/register', async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
+  if (!email || !password)
+    return res.status(400).json({ message: 'Email and password required' });
 
   try {
     const hash = await bcrypt.hash(password, 10);
@@ -62,11 +63,12 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// LOGIN
+// ✅ Login
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).json({ message: 'Missing credentials' });
+  if (!email || !password)
+    return res.status(400).json({ message: 'Missing credentials' });
 
   db.get('SELECT * FROM accounts WHERE email = ?', [email], async (err, user) => {
     if (err || !user) {
@@ -76,12 +78,29 @@ app.post('/api/auth/login', (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET || 'supersecret');
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET || 'supersecret'
+    );
+
     res.json({ message: 'Login successful', token });
   });
 });
 
-// PORT fallback
+// ✅ Verify token for auto-login
+app.get('/api/auth/verify', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401); // No token sent
+
+  jwt.verify(token, process.env.JWT_SECRET || 'supersecret', (err, user) => {
+    if (err) return res.sendStatus(403); // Invalid token
+    res.status(200).json({ valid: true, user });
+  });
+});
+
+// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 MiamiRP API running on port ${PORT}`);
